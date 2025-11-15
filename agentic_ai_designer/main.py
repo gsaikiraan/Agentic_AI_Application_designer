@@ -300,6 +300,11 @@ class InteractiveCLI:
         if save_report == 'y':
             self.save_report(report, output.requirements.project_name)
 
+        # Ask to save LangGraph code
+        save_code = self.get_input("\n💻 Save LangGraph implementation code? (y/n)", "y").lower()
+        if save_code == 'y':
+            self.designer.save_langgraph_code(output)
+
     def run(self):
         """Run the interactive CLI application."""
         self.print_header()

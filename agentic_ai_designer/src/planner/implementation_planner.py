@@ -154,13 +154,21 @@ project_root/
             estimated_effort="small",
             code_example="""
 # requirements.txt
+# LangChain and LangGraph for agentic AI
 langchain>=0.1.0
+langchain-core>=0.1.0
+langgraph>=0.0.50
+langchain-openai>=0.0.5
+langchain-community>=0.0.20
+
+# Additional tools
+tavily-python>=0.3.0  # Web search
 pydantic>=2.0.0
-asyncio>=3.4.3
-aiohttp>=3.9.0
-redis>=5.0.0  # For message queue
 python-dotenv>=1.0.0
+
+# Testing
 pytest>=7.4.0
+pytest-asyncio>=0.21.0
             """,
             testing_considerations=[
                 "Verify all dependencies install successfully",
@@ -552,71 +560,94 @@ class WebSearchTool(Tool):
 
         tasks.append(ImplementationTask(
             task_id="3.1",
-            title="Implement Base Agent Class",
-            description="Create base agent with core capabilities",
+            title="Implement Base Agent with LangGraph",
+            description="Create base agent using LangGraph and LangChain",
             dependencies=["2.1", "2.2", "2.3"],
             estimated_effort="large",
             code_example="""
 # agents/base_agent.py
-from abc import ABC, abstractmethod
-from typing import Dict, List, Optional
-from components.reflection.reflector import ReflectionModule
-from components.planning.planner import PlanningModule, Task
-from components.communication.message_bus import MessageBus, Message
+from typing import TypedDict, Annotated, List
+from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
+from langchain_openai import ChatOpenAI
+from langgraph.graph.message import add_messages
 
-class BaseAgent(ABC):
+class AgentState(TypedDict):
+    \"\"\"Shared state for LangGraph agents.\"\"\"
+    messages: Annotated[List, add_messages]
+    current_task: str
+    next_agent: str
+    reflection_data: dict
+    tool_results: dict
+
+class BaseAgent:
     def __init__(
         self,
         agent_id: str,
         role: str,
-        message_bus: MessageBus,
-        config: Dict
+        model: str = "gpt-4"
     ):
         self.agent_id = agent_id
         self.role = role
-        self.message_bus = message_bus
-        self.config = config
+        self.llm = ChatOpenAI(model=model, temperature=0)
+        self.tools = self._get_tools()
 
-        # Core components
-        self.reflection = ReflectionModule(config.get('reflection', {}))
-        self.planner = PlanningModule()
+        # Bind tools to LLM if available
+        if self.tools:
+            self.llm = self.llm.bind_tools(self.tools)
 
-        # State
-        self.current_tasks: List[Task] = []
-        self.execution_context = {}
+    def _get_tools(self) -> list:
+        \"\"\"Get tools for this agent role. Override in subclasses.\"\"\"
+        return []
 
-        # Subscribe to messages
-        self.message_bus.subscribe(agent_id, self.handle_message)
+    def get_system_prompt(self) -> str:
+        \"\"\"Get system prompt for this agent.\"\"\"
+        return f\"You are {self.agent_id}, a {self.role} agent in a multi-agent system.\"
 
-    async def execute_task(self, task: Task) -> Dict:
-        \"\"\"Execute a task with reflection loop.\"\"\"
-        self.current_tasks.append(task)
+    def invoke(self, state: AgentState) -> AgentState:
+        \"\"\"Main agent execution - called by LangGraph.\"\"\"
+        # Prepare messages with system prompt
+        messages = [
+            SystemMessage(content=self.get_system_prompt()),
+            *state['messages']
+        ]
 
-        try:
-            # Execute the task
-            result = await self._execute(task)
+        # Invoke LLM
+        response = self.llm.invoke(messages)
 
-            # Reflect on execution
-            reflection = await self.reflection.reflect(self.execution_context)
+        # Return updated state
+        return {
+            'messages': [response],
+            'next_agent': self.determine_next_agent(state, response)
+        }
 
-            # Replan if needed
-            if reflection.issues_detected:
-                new_tasks = self.planner.replan(task.task_id, reflection)
-                self.current_tasks.extend(new_tasks)
+    def determine_next_agent(self, state: AgentState, response) -> str:
+        \"\"\"Determine which agent should run next. Override in subclasses.\"\"\"
+        return 'END'
 
-            return result
-        finally:
-            self.current_tasks.remove(task)
+# Example: Master Planner Agent
+from langgraph.graph import StateGraph, END
 
-    @abstractmethod
-    async def _execute(self, task: Task) -> Dict:
-        \"\"\"Agent-specific execution logic.\"\"\"
-        pass
+class MasterPlannerAgent(BaseAgent):
+    def __init__(self):
+        super().__init__("master_planner", "coordinator")
 
-    async def handle_message(self, message: Message):
-        \"\"\"Handle incoming messages.\"\"\"
-        # Override in subclass for specific behavior
-        pass
+    def get_system_prompt(self) -> str:
+        return \"\"\"You are the Master Planner agent.
+
+Your role is to:
+1. Analyze incoming tasks
+2. Break them into subtasks
+3. Delegate to specialist agents
+4. Coordinate overall workflow
+
+Be strategic and efficient in your planning.\"\"\"
+
+    def determine_next_agent(self, state: AgentState, response) -> str:
+        # Route to appropriate specialist
+        task = state.get('current_task', '')
+        if 'research' in task.lower():
+            return 'research_specialist'
+        return 'END'
             """,
             testing_considerations=[
                 "Test agent lifecycle (initialization, execution, cleanup)",
@@ -658,14 +689,79 @@ class BaseAgent(ABC):
         tasks = [
             ImplementationTask(
                 task_id="4.1",
-                title="Integrate Components",
-                description="Wire all components and agents together",
+                title="Create LangGraph Workflow",
+                description="Build the multi-agent workflow graph using LangGraph",
                 dependencies=["3.1"] + [f"3.{i+2}" for i in range(len(architecture.agents))],
                 estimated_effort="large",
+                code_example="""
+# workflow.py
+from langgraph.graph import StateGraph, END
+from langgraph.checkpoint.memory import MemorySaver
+from agents.base_agent import AgentState
+from agents.master_planner import MasterPlannerAgent
+from agents.specialist import SpecialistAgent
+
+def create_workflow():
+    \"\"\"Create the multi-agent workflow graph.\"\"\"
+
+    # Initialize agents
+    master = MasterPlannerAgent()
+    specialist = SpecialistAgent()
+
+    # Create graph
+    workflow = StateGraph(AgentState)
+
+    # Add agent nodes
+    workflow.add_node("master_planner", master.invoke)
+    workflow.add_node("specialist", specialist.invoke)
+
+    # Define workflow edges
+    workflow.set_entry_point("master_planner")
+
+    # Add conditional routing
+    def route_agent(state: AgentState) -> str:
+        next_agent = state.get("next_agent", "END")
+        return next_agent
+
+    workflow.add_conditional_edges(
+        "master_planner",
+        route_agent,
+        {
+            "specialist": "specialist",
+            "END": END
+        }
+    )
+
+    workflow.add_edge("specialist", "master_planner")
+
+    # Compile with checkpointing for memory
+    memory = MemorySaver()
+    app = workflow.compile(checkpointer=memory)
+
+    return app
+
+# Usage
+if __name__ == "__main__":
+    from langchain_core.messages import HumanMessage
+
+    app = create_workflow()
+
+    # Run the workflow
+    config = {"configurable": {"thread_id": "1"}}
+    inputs = {
+        "messages": [HumanMessage(content="Research multi-agent AI systems")],
+        "current_task": "Research multi-agent AI systems"
+    }
+
+    for output in app.stream(inputs, config):
+        for key, value in output.items():
+            print(f"Agent {key}: {value}")
+                """,
                 testing_considerations=[
-                    "Test end-to-end workflows",
-                    "Verify component interactions",
-                    "Test error propagation"
+                    "Test workflow graph construction",
+                    "Verify agent routing logic",
+                    "Test state persistence with checkpointer",
+                    "Validate end-to-end agent collaboration"
                 ]
             ),
             ImplementationTask(

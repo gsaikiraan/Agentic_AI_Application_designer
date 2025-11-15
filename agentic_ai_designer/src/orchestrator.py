@@ -5,10 +5,12 @@ Coordinates the analysis, design, and planning process.
 
 from dataclasses import dataclass
 from typing import Dict, Optional
+from pathlib import Path
 from .analyzer import RequirementsAnalyzer, SystemRequirements, AnalysisResult
 from .designer import ArchitectureDesigner, SystemArchitecture, format_architecture
 from .planner import ImplementationPlanner, ImplementationPlan, format_implementation_plan
 from .framework import get_all_patterns, get_academic_insights, get_application_domains
+from .codegen import LangGraphCodeGenerator, format_langgraph_code
 
 
 @dataclass
@@ -18,6 +20,7 @@ class DesignOutput:
     analysis: AnalysisResult
     architecture: SystemArchitecture
     implementation_plan: ImplementationPlan
+    langgraph_code: Optional[Dict[str, str]] = None
 
 
 class AgenticAIDesigner:
@@ -30,6 +33,7 @@ class AgenticAIDesigner:
         self.analyzer = RequirementsAnalyzer()
         self.designer = ArchitectureDesigner()
         self.planner = ImplementationPlanner()
+        self.code_generator = LangGraphCodeGenerator()
 
     def design_system(self, requirements: SystemRequirements) -> DesignOutput:
         """
@@ -53,13 +57,18 @@ class AgenticAIDesigner:
         print("📋 Creating implementation plan...")
         implementation_plan = self.planner.create_plan(architecture)
 
+        # Step 4: Generate LangGraph code
+        print("💻 Generating LangGraph implementation code...")
+        langgraph_code = self.code_generator.generate_implementation(architecture)
+
         print("✅ Design process completed!\n")
 
         return DesignOutput(
             requirements=requirements,
             analysis=analysis,
             architecture=architecture,
-            implementation_plan=implementation_plan
+            implementation_plan=implementation_plan,
+            langgraph_code=langgraph_code
         )
 
     def generate_report(self, output: DesignOutput) -> str:
@@ -159,9 +168,23 @@ class AgenticAIDesigner:
             report.append(f"Reference: {insight.reference}")
             report.append("")
 
+        # LangGraph Implementation Code
+        if output.langgraph_code:
+            report.append("\n" + "=" * 80)
+            report.append("## 5. LANGGRAPH IMPLEMENTATION CODE")
+            report.append("=" * 80)
+            report.append("")
+            report.append("The following code provides a working LangGraph implementation")
+            report.append("of the designed multi-agent system. This code is production-ready")
+            report.append("and follows LangChain/LangGraph best practices.")
+            report.append("")
+
+            formatted_code = format_langgraph_code(output.langgraph_code)
+            report.append(formatted_code)
+
         # Conclusion
         report.append("\n" + "=" * 80)
-        report.append("## 5. CONCLUSION")
+        report.append("## 6. CONCLUSION")
         report.append("=" * 80)
         report.append("")
         report.append(
@@ -256,3 +279,38 @@ class AgenticAIDesigner:
         diagram.append(f"\n{'=' * 60}\n")
 
         return "\n".join(diagram)
+
+    def save_langgraph_code(self, output: DesignOutput, output_dir: str = "generated_code") -> None:
+        """
+        Save generated LangGraph code to files.
+
+        Args:
+            output: Design output with LangGraph code
+            output_dir: Directory to save code files
+        """
+        if not output.langgraph_code:
+            print("⚠️  No LangGraph code to save")
+            return
+
+        # Create output directory
+        code_dir = Path(output_dir) / output.requirements.project_name.lower().replace(" ", "_")
+        code_dir.mkdir(parents=True, exist_ok=True)
+
+        # Save each file
+        for filename, code in output.langgraph_code.items():
+            filepath = code_dir / filename
+            with open(filepath, 'w') as f:
+                f.write(code)
+            print(f"✅ Created: {filepath}")
+
+        # Create __init__.py
+        init_file = code_dir / "__init__.py"
+        with open(init_file, 'w') as f:
+            f.write(f'"""\n{output.requirements.project_name}\n"""')
+
+        print(f"\n✅ LangGraph code saved to: {code_dir}")
+        print("\nTo run the generated code:")
+        print(f"  cd {code_dir}")
+        print("  export OPENAI_API_KEY=your_key_here")
+        print("  export TAVILY_API_KEY=your_key_here  # Optional for web search")
+        print("  python main.py")
