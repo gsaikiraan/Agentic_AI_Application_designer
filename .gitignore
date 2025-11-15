@@ -33,6 +33,7 @@ env/
 
 # Output
 agentic_ai_designer/output/
+agentic_ai_designer/generated_code/
 
 # OS
 .DS_Store
