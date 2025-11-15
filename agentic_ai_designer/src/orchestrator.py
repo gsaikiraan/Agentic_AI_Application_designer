@@ -6,6 +6,7 @@ Coordinates the analysis, design, and planning process.
 from dataclasses import dataclass
 from typing import Dict, Optional
 from pathlib import Path
+import os
 from .analyzer import RequirementsAnalyzer, SystemRequirements, AnalysisResult
 from .designer import ArchitectureDesigner, SystemArchitecture, format_architecture
 from .planner import ImplementationPlanner, ImplementationPlan, format_implementation_plan
@@ -21,37 +22,123 @@ class DesignOutput:
     architecture: SystemArchitecture
     implementation_plan: ImplementationPlan
     langgraph_code: Optional[Dict[str, str]] = None
+    llm_reasoning: Optional[Dict] = None
+    architecture_critique: Optional[Dict] = None
 
 
 class AgenticAIDesigner:
     """
     Main orchestrator that thinks like an AI engineer to design
     agentic AI applications based on the design framework.
+
+    Now truly agentic with LLM-based reasoning and self-reflection!
     """
 
-    def __init__(self):
+    def __init__(self, agentic_mode: bool = None):
+        """
+        Initialize the designer.
+
+        Args:
+            agentic_mode: Enable LLM-based reasoning and critique (auto-detects if None)
+        """
         self.analyzer = RequirementsAnalyzer()
         self.designer = ArchitectureDesigner()
         self.planner = ImplementationPlanner()
         self.code_generator = LangGraphCodeGenerator()
 
+        # Auto-detect agentic mode based on API key availability
+        if agentic_mode is None:
+            self.agentic_mode = bool(os.getenv("OPENAI_API_KEY"))
+        else:
+            self.agentic_mode = agentic_mode
+
+        # Initialize agentic agents if enabled
+        self.llm_reasoner = None
+        self.critic = None
+
+        if self.agentic_mode:
+            try:
+                from .agents import LLMReasoningAgent, ArchitectureCriticAgent
+                self.llm_reasoner = LLMReasoningAgent()
+                self.critic = ArchitectureCriticAgent()
+                print("🧠 Agentic mode enabled: Using LLM reasoning and critique")
+            except Exception as e:
+                print(f"⚠️  Agentic mode disabled: {e}")
+                self.agentic_mode = False
+
     def design_system(self, requirements: SystemRequirements) -> DesignOutput:
         """
         Complete design process from requirements to implementation plan.
+        Uses agentic capabilities (LLM reasoning & critique) if enabled.
 
         Args:
             requirements: System requirements
 
         Returns:
-            Complete design output
+            Complete design output with optional LLM reasoning and critique
         """
+        llm_reasoning = None
+        architecture_critique = None
+
+        # Agentic Step 0: LLM-based deep analysis (if enabled)
+        if self.agentic_mode and self.llm_reasoner:
+            print("🧠 Using LLM to deeply analyze requirements...")
+            llm_reasoning = self.llm_reasoner.analyze_requirements(requirements)
+
+            print("💡 Evaluating complexity with LLM reasoning...")
+            complexity_eval = self.llm_reasoner.evaluate_complexity(requirements)
+            llm_reasoning.update(complexity_eval)
+
         # Step 1: Analyze requirements
         print("🔍 Analyzing requirements...")
         analysis = self.analyzer.analyze(requirements)
 
+        # Agentic enhancement: Use LLM suggestions if available
+        if self.agentic_mode and self.llm_reasoner:
+            print("🎯 Getting LLM pattern recommendations...")
+            pattern_recs = self.llm_reasoner.recommend_patterns(
+                requirements,
+                llm_reasoning.get("llm_analysis", "")
+            )
+            llm_reasoning.update(pattern_recs)
+
         # Step 2: Design architecture
         print("🏗️  Designing system architecture...")
         architecture = self.designer.design(analysis)
+
+        # Agentic Step 2.5: Critique and reflect on architecture
+        if self.agentic_mode and self.critic:
+            print("🔍 Critiquing architecture with reflection agent...")
+
+            # Create architecture summary for critique
+            arch_summary = f"""
+Project: {architecture.project_name}
+Agents: {len(architecture.agents)}
+Agent Roles: {', '.join(a.name for a in architecture.agents)}
+Patterns: {', '.join(p.value for p in architecture.patterns)}
+Components: {', '.join(c.value for c in architecture.components.keys())}
+Communication: {architecture.communication_topology}
+"""
+
+            # Get critique
+            architecture_critique = self.critic.critique_architecture(
+                requirements,
+                arch_summary
+            )
+
+            # Get scores
+            print("📊 Scoring architecture...")
+            scores = self.critic.score_architecture(arch_summary, requirements)
+            architecture_critique.update(scores)
+
+            # Get alternative suggestions
+            print("💭 Generating alternative approaches...")
+            alternatives = self.critic.suggest_alternatives(
+                requirements,
+                arch_summary,
+                architecture_critique.get("critique", "")
+            )
+            architecture_critique.update(alternatives)
 
         # Step 3: Create implementation plan
         print("📋 Creating implementation plan...")
@@ -68,7 +155,9 @@ class AgenticAIDesigner:
             analysis=analysis,
             architecture=architecture,
             implementation_plan=implementation_plan,
-            langgraph_code=langgraph_code
+            langgraph_code=langgraph_code,
+            llm_reasoning=llm_reasoning,
+            architecture_critique=architecture_critique
         )
 
     def generate_report(self, output: DesignOutput) -> str:
@@ -138,12 +227,60 @@ class AgenticAIDesigner:
                 report.append(f"⚠️  {warning}")
             report.append("")
 
+        # LLM Reasoning (if available)
+        if output.llm_reasoning:
+            report.append("\n" + "=" * 80)
+            report.append("## 1.5. LLM-POWERED DEEP ANALYSIS 🧠")
+            report.append("=" * 80)
+            report.append("")
+            report.append("*Agentic mode enabled: Using LLM reasoning for intelligent design decisions*")
+            report.append("")
+
+            if "llm_analysis" in output.llm_reasoning:
+                report.append("### Requirements Analysis")
+                report.append(output.llm_reasoning["llm_analysis"])
+                report.append("")
+
+            if "complexity_reasoning" in output.llm_reasoning:
+                report.append("### Complexity Evaluation")
+                report.append(output.llm_reasoning["complexity_reasoning"])
+                report.append("")
+
+            if "pattern_recommendations" in output.llm_reasoning:
+                report.append("### Pattern Recommendations")
+                report.append(output.llm_reasoning["pattern_recommendations"])
+                report.append("")
+
         # Architecture
         report.append("\n" + "=" * 80)
         report.append("## 2. SYSTEM ARCHITECTURE")
         report.append("=" * 80)
         report.append("")
         report.append(format_architecture(output.architecture))
+
+        # Architecture Critique (if available)
+        if output.architecture_critique:
+            report.append("\n" + "=" * 80)
+            report.append("## 2.5. ARCHITECTURE CRITIQUE & REFLECTION 🔍")
+            report.append("=" * 80)
+            report.append("")
+            report.append("*Self-reflection by critic agent: Evaluating design quality and suggesting improvements*")
+            report.append("")
+
+            if "critique" in output.architecture_critique:
+                report.append("### Design Review")
+                report.append(output.architecture_critique["critique"])
+                report.append("")
+
+            if "scores" in output.architecture_critique:
+                report.append("### Quality Scores")
+                report.append(output.architecture_critique["scores"])
+                report.append("")
+
+            if "alternatives" in output.architecture_critique:
+                report.append("### Alternative Approaches")
+                report.append(output.architecture_critique["alternatives"])
+                report.append("")
 
         # Implementation Plan
         report.append("\n" + "=" * 80)

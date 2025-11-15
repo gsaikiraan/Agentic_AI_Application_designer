@@ -42,14 +42,30 @@ The design framework integrates insights from:
 - Testing strategies
 - Best practices and risk mitigation
 
-### 4. **LangGraph Code Generation** ⚡ NEW!
+### 4. **LangGraph Code Generation** ⚡
 - **Production-ready code**: Generates working LangGraph implementations
 - **6 files per project**: state.py, agents.py, tools.py, graph.py, main.py, config.py
 - **Full integration**: LangChain tools, OpenAI models, state management
 - **Ready to run**: Just add API keys and execute
 - **Best practices**: Follows official LangGraph patterns
 
-### 5. Comprehensive Documentation
+### 5. **Agentic Capabilities** 🧠 NEW!
+**The designer itself is now truly agentic!**
+
+- **LLM-Powered Reasoning**: Uses GPT-4 to deeply analyze requirements and make intelligent architecture decisions
+- **Self-Reflection & Critique**: Critic agent evaluates generated architectures and suggests improvements
+- **Quality Scoring**: Scores designs on alignment, scalability, maintainability, complexity, and reliability
+- **Alternative Generation**: Suggests 2-3 alternative architectural approaches with trade-offs
+- **Adaptive Complexity Evaluation**: LLM reasons about system complexity with detailed justification
+- **Pattern Recommendations**: AI-powered suggestions for which design patterns to apply and why
+
+**How it works:**
+1. Set `OPENAI_API_KEY` environment variable
+2. Run the designer - agentic mode auto-activates
+3. Get LLM reasoning, critique, scores, and alternatives in your report
+4. Falls back gracefully to rule-based mode without API key
+
+### 6. Comprehensive Documentation
 - Full design reports in Markdown
 - Architecture diagrams
 - Academic foundations
@@ -94,6 +110,28 @@ python main.py
 ```
 
 See `examples/` directory for sample JSON templates.
+
+### Enabling Agentic Mode 🧠
+
+For LLM-powered reasoning and architecture critique:
+
+```bash
+# Set your OpenAI API key
+export OPENAI_API_KEY="your-openai-api-key"
+
+# Run the designer - agentic mode will auto-activate
+python main.py
+```
+
+**Agentic mode benefits:**
+- 🧠 Deep LLM analysis of requirements
+- 💡 Intelligent complexity evaluation with reasoning
+- 🎯 AI-powered pattern recommendations
+- 🔍 Architecture critique and quality scores
+- 💭 Alternative design approaches
+- ✨ More insightful and context-aware designs
+
+**Without API key:** Falls back to rule-based mode (still fully functional)
 
 ### Running Generated LangGraph Code
 
@@ -142,8 +180,10 @@ agentic_ai_designer/
 │   │   └── architecture_designer.py
 │   ├── planner/                # Implementation planning
 │   │   └── implementation_planner.py
-│   ├── codegen/                # LangGraph code generation ⚡ NEW!
+│   ├── codegen/                # LangGraph code generation ⚡
 │   │   └── __init__.py         # LangGraph code generator
+│   ├── agents/                 # Agentic capabilities 🧠 NEW!
+│   │   └── __init__.py         # LLM reasoning & critic agents
 │   └── orchestrator.py         # Main orchestrator
 ├── examples/                   # Example JSON templates
 │   ├── research_assistant.json
