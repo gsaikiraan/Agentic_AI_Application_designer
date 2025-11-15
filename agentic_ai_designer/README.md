@@ -38,15 +38,23 @@ The design framework integrates insights from:
 ### 3. Implementation Planning
 - Phased implementation approach
 - Detailed tasks with dependencies
-- Code examples and templates
+- LangChain/LangGraph code examples
 - Testing strategies
 - Best practices and risk mitigation
 
-### 4. Comprehensive Documentation
+### 4. **LangGraph Code Generation** ⚡ NEW!
+- **Production-ready code**: Generates working LangGraph implementations
+- **6 files per project**: state.py, agents.py, tools.py, graph.py, main.py, config.py
+- **Full integration**: LangChain tools, OpenAI models, state management
+- **Ready to run**: Just add API keys and execute
+- **Best practices**: Follows official LangGraph patterns
+
+### 5. Comprehensive Documentation
 - Full design reports in Markdown
 - Architecture diagrams
 - Academic foundations
 - Technology stack recommendations
+- Complete LangGraph code in reports
 
 ## 🚀 Quick Start
 
@@ -87,6 +95,38 @@ python main.py
 
 See `examples/` directory for sample JSON templates.
 
+### Running Generated LangGraph Code
+
+After designing your system, the application generates production-ready LangGraph code:
+
+```bash
+# The code is saved to generated_code/<project_name>/
+cd generated_code/your_project_name
+
+# Set your API keys
+export OPENAI_API_KEY="your-openai-key"
+export TAVILY_API_KEY="your-tavily-key"  # Optional, for web search
+
+# Run the multi-agent system
+python main.py
+```
+
+**Generated Files:**
+- `state.py` - TypedDict state definitions with LangGraph message handling
+- `agents.py` - Complete agent implementations with LLM integration
+- `tools.py` - Tool definitions and registry (web search, analysis, etc.)
+- `graph.py` - StateGraph workflow with conditional routing
+- `main.py` - Entry point with execution logic
+- `config.py` - Configuration management
+
+The generated code includes:
+- ✅ Multi-agent coordination with LangGraph StateGraph
+- ✅ State management with checkpointing (MemorySaver)
+- ✅ LangChain tool integration
+- ✅ Conditional routing between agents
+- ✅ System prompts and agent behaviors
+- ✅ Ready-to-run examples
+
 ## 📁 Project Structure
 
 ```
@@ -102,12 +142,15 @@ agentic_ai_designer/
 │   │   └── architecture_designer.py
 │   ├── planner/                # Implementation planning
 │   │   └── implementation_planner.py
+│   ├── codegen/                # LangGraph code generation ⚡ NEW!
+│   │   └── __init__.py         # LangGraph code generator
 │   └── orchestrator.py         # Main orchestrator
 ├── examples/                   # Example JSON templates
 │   ├── research_assistant.json
 │   ├── code_review_system.json
 │   └── simple_assistant.json
 ├── output/                     # Generated design reports
+├── generated_code/             # Generated LangGraph implementations ⚡ NEW!
 ├── main.py                     # CLI entry point
 ├── requirements.txt
 └── README.md
