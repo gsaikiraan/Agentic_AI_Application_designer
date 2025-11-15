@@ -42,12 +42,13 @@ The design framework integrates insights from:
 - Testing strategies
 - Best practices and risk mitigation
 
-### 4. **LangGraph Code Generation** ⚡
-- **Production-ready code**: Generates working LangGraph implementations
-- **6 files per project**: state.py, agents.py, tools.py, graph.py, main.py, config.py
-- **Full integration**: LangChain tools, OpenAI models, state management
-- **Ready to run**: Just add API keys and execute
-- **Best practices**: Follows official LangGraph patterns
+### 4. **Multi-Framework Code Generation** ⚡ NEW!
+- **LangGraph Support**: Production-ready LangGraph implementations with StateGraph
+- **CrewAI Support**: CrewAI-based multi-agent systems with crew orchestration
+- **Separate Agent Files**: Each agent gets its own module for better organization
+- **Framework Selection**: Choose LangGraph, CrewAI, or both during design
+- **Production Ready**: Full integration with LangChain/CrewAI tools, OpenAI models
+- **Best Practices**: Follows official framework patterns and conventions
 
 ### 5. **Agentic Capabilities** 🧠 NEW!
 **The designer itself is now truly agentic!**
@@ -97,7 +98,8 @@ Follow the interactive prompts to:
 1. Enter project details
 2. Specify goals and requirements
 3. Configure agents and tools
-4. Get comprehensive design and implementation plan
+4. **Select code generation framework** (LangGraph, CrewAI, or both)
+5. Get comprehensive design and implementation plan with generated code
 
 ### Load from JSON
 
@@ -133,13 +135,15 @@ python main.py
 
 **Without API key:** Falls back to rule-based mode (still fully functional)
 
-### Running Generated LangGraph Code
+### Running Generated Code
 
-After designing your system, the application generates production-ready LangGraph code:
+After designing your system, the application generates production-ready code in your chosen framework(s):
+
+#### LangGraph Implementation
 
 ```bash
-# The code is saved to generated_code/<project_name>/
-cd generated_code/your_project_name
+# The code is saved to generated_code/<project_name>_langgraph/
+cd generated_code/your_project_name_langgraph
 
 # Set your API keys
 export OPENAI_API_KEY="your-openai-key"
@@ -151,19 +155,74 @@ python main.py
 
 **Generated Files:**
 - `state.py` - TypedDict state definitions with LangGraph message handling
-- `agents.py` - Complete agent implementations with LLM integration
+- `agents/__init__.py` - Base agent class
+- `agents/master_planner_agent.py` - Master planner agent (example)
+- `agents/*_agent.py` - Individual agent modules (separate file per agent)
 - `tools.py` - Tool definitions and registry (web search, analysis, etc.)
 - `graph.py` - StateGraph workflow with conditional routing
 - `main.py` - Entry point with execution logic
 - `config.py` - Configuration management
 
+#### CrewAI Implementation
+
+```bash
+# The code is saved to generated_code/<project_name>_crewai/
+cd generated_code/your_project_name_crewai
+
+# Set your API keys
+export OPENAI_API_KEY="your-openai-key"
+export SERPER_API_KEY="your-serper-key"  # For web search
+
+# Run the multi-agent system
+python main.py "Your task here"
+```
+
+**Generated Files:**
+- `config.py` - Configuration management
+- `agents/__init__.py` - Agent imports
+- `agents/master_planner.py` - Master planner agent (example)
+- `agents/*_agent.py` - Individual agent modules (separate file per agent)
+- `tools.py` - CrewAI tool definitions and registry
+- `tasks.py` - Task definitions for agents
+- `crew.py` - Crew orchestration
+- `main.py` - Entry point with execution logic
+
 The generated code includes:
-- ✅ Multi-agent coordination with LangGraph StateGraph
-- ✅ State management with checkpointing (MemorySaver)
-- ✅ LangChain tool integration
+- ✅ **Separate agent files** - Each agent in its own module
+- ✅ Multi-agent coordination (LangGraph StateGraph or CrewAI Crew)
+- ✅ State management with checkpointing
+- ✅ Tool integration (LangChain/CrewAI tools)
 - ✅ Conditional routing between agents
 - ✅ System prompts and agent behaviors
 - ✅ Ready-to-run examples
+
+## 🎨 Framework Selection
+
+The designer now supports multiple frameworks for code generation:
+
+### LangGraph
+- **Best for**: Complex state management, conditional workflows, checkpointing
+- **Architecture**: StateGraph with nodes and edges
+- **Use cases**: Workflows requiring complex decision trees, state persistence
+- **Tools**: LangChain tool ecosystem
+
+### CrewAI
+- **Best for**: Role-based agent collaboration, hierarchical task delegation
+- **Architecture**: Crew with agents, tasks, and process flow
+- **Use cases**: Multi-agent collaboration with clear role definitions
+- **Tools**: CrewAI-specific tools with Serper integration
+
+### Both Frameworks
+- Generate implementations in both frameworks
+- Compare approaches and choose the best fit
+- Learn different multi-agent patterns
+- Prototype and experiment with different architectures
+
+**During the design process, you'll be prompted to select:**
+1. **LangGraph only** - Generate LangGraph implementation
+2. **CrewAI only** - Generate CrewAI implementation
+3. **Both** - Generate both implementations side-by-side
+4. **None** - Design document only (no code generation)
 
 ## 📁 Project Structure
 
@@ -180,8 +239,10 @@ agentic_ai_designer/
 │   │   └── architecture_designer.py
 │   ├── planner/                # Implementation planning
 │   │   └── implementation_planner.py
-│   ├── codegen/                # LangGraph code generation ⚡
-│   │   └── __init__.py         # LangGraph code generator
+│   ├── codegen/                # Multi-framework code generation ⚡
+│   │   ├── __init__.py         # Base LangGraph code generator
+│   │   ├── langgraph_generator.py  # Enhanced LangGraph generator (separate files)
+│   │   └── crewai_generator.py     # CrewAI code generator
 │   ├── agents/                 # Agentic capabilities 🧠 NEW!
 │   │   └── __init__.py         # LLM reasoning & critic agents
 │   └── orchestrator.py         # Main orchestrator

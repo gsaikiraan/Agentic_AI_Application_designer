@@ -4,7 +4,7 @@ Coordinates the analysis, design, and planning process.
 """
 
 from dataclasses import dataclass
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 from pathlib import Path
 import os
 from .analyzer import RequirementsAnalyzer, SystemRequirements, AnalysisResult
@@ -12,6 +12,8 @@ from .designer import ArchitectureDesigner, SystemArchitecture, format_architect
 from .planner import ImplementationPlanner, ImplementationPlan, format_implementation_plan
 from .framework import get_all_patterns, get_academic_insights, get_application_domains
 from .codegen import LangGraphCodeGenerator, format_langgraph_code
+from .codegen.langgraph_generator import EnhancedLangGraphGenerator
+from .codegen.crewai_generator import CrewAICodeGenerator
 
 
 @dataclass
@@ -22,6 +24,8 @@ class DesignOutput:
     architecture: SystemArchitecture
     implementation_plan: ImplementationPlan
     langgraph_code: Optional[Dict[str, str]] = None
+    crewai_code: Optional[Dict[str, str]] = None
+    selected_frameworks: List[str] = None
     llm_reasoning: Optional[Dict] = None
     architecture_critique: Optional[Dict] = None
 
@@ -34,17 +38,28 @@ class AgenticAIDesigner:
     Now truly agentic with LLM-based reasoning and self-reflection!
     """
 
-    def __init__(self, agentic_mode: bool = None):
+    def __init__(self, agentic_mode: bool = None, frameworks: List[str] = None):
         """
         Initialize the designer.
 
         Args:
             agentic_mode: Enable LLM-based reasoning and critique (auto-detects if None)
+            frameworks: List of frameworks to generate code for ['langgraph', 'crewai']
+                       Defaults to ['langgraph'] if None
         """
         self.analyzer = RequirementsAnalyzer()
         self.designer = ArchitectureDesigner()
         self.planner = ImplementationPlanner()
-        self.code_generator = LangGraphCodeGenerator()
+
+        # Initialize code generators
+        self.langgraph_generator = EnhancedLangGraphGenerator()
+        self.crewai_generator = CrewAICodeGenerator()
+
+        # Set frameworks
+        if frameworks is None:
+            self.frameworks = ['langgraph']
+        else:
+            self.frameworks = frameworks
 
         # Auto-detect agentic mode based on API key availability
         if agentic_mode is None:
@@ -144,9 +159,17 @@ Communication: {architecture.communication_topology}
         print("📋 Creating implementation plan...")
         implementation_plan = self.planner.create_plan(architecture)
 
-        # Step 4: Generate LangGraph code
-        print("💻 Generating LangGraph implementation code...")
-        langgraph_code = self.code_generator.generate_implementation(architecture)
+        # Step 4: Generate code for selected frameworks
+        langgraph_code = None
+        crewai_code = None
+
+        if 'langgraph' in self.frameworks:
+            print("💻 Generating LangGraph implementation code...")
+            langgraph_code = self.langgraph_generator.generate(architecture)
+
+        if 'crewai' in self.frameworks:
+            print("🤖 Generating CrewAI implementation code...")
+            crewai_code = self.crewai_generator.generate(architecture)
 
         print("✅ Design process completed!\n")
 
@@ -156,6 +179,8 @@ Communication: {architecture.communication_topology}
             architecture=architecture,
             implementation_plan=implementation_plan,
             langgraph_code=langgraph_code,
+            crewai_code=crewai_code,
+            selected_frameworks=self.frameworks,
             llm_reasoning=llm_reasoning,
             architecture_critique=architecture_critique
         )
@@ -417,37 +442,65 @@ Communication: {architecture.communication_topology}
 
         return "\n".join(diagram)
 
+    def save_generated_code(self, output: DesignOutput, output_dir: str = "generated_code") -> None:
+        """
+        Save all generated code to files.
+
+        Args:
+            output: Design output with generated code
+            output_dir: Directory to save code files
+        """
+        project_name = output.requirements.project_name.lower().replace(" ", "_")
+
+        # Save LangGraph code
+        if output.langgraph_code:
+            code_dir = Path(output_dir) / f"{project_name}_langgraph"
+            code_dir.mkdir(parents=True, exist_ok=True)
+
+            for filename, code in output.langgraph_code.items():
+                filepath = code_dir / filename
+                # Create subdirectories if needed
+                filepath.parent.mkdir(parents=True, exist_ok=True)
+                with open(filepath, 'w') as f:
+                    f.write(code)
+
+            print(f"✅ LangGraph code saved to: {code_dir}")
+            print("   To run:")
+            print(f"     cd {code_dir}")
+            print("     export OPENAI_API_KEY=your_key")
+            print("     python main.py")
+            print()
+
+        # Save CrewAI code
+        if output.crewai_code:
+            code_dir = Path(output_dir) / f"{project_name}_crewai"
+            code_dir.mkdir(parents=True, exist_ok=True)
+
+            for filename, code in output.crewai_code.items():
+                filepath = code_dir / filename
+                # Create subdirectories if needed
+                filepath.parent.mkdir(parents=True, exist_ok=True)
+                with open(filepath, 'w') as f:
+                    f.write(code)
+
+            print(f"✅ CrewAI code saved to: {code_dir}")
+            print("   To run:")
+            print(f"     cd {code_dir}")
+            print("     export OPENAI_API_KEY=your_key")
+            print("     export SERPER_API_KEY=your_key  # For web search")
+            print("     python main.py")
+            print()
+
+        if not output.langgraph_code and not output.crewai_code:
+            print("⚠️  No code to save")
+
     def save_langgraph_code(self, output: DesignOutput, output_dir: str = "generated_code") -> None:
         """
-        Save generated LangGraph code to files.
+        Save generated LangGraph code to files (legacy method).
 
         Args:
             output: Design output with LangGraph code
             output_dir: Directory to save code files
         """
-        if not output.langgraph_code:
-            print("⚠️  No LangGraph code to save")
-            return
-
-        # Create output directory
-        code_dir = Path(output_dir) / output.requirements.project_name.lower().replace(" ", "_")
-        code_dir.mkdir(parents=True, exist_ok=True)
-
-        # Save each file
-        for filename, code in output.langgraph_code.items():
-            filepath = code_dir / filename
-            with open(filepath, 'w') as f:
-                f.write(code)
-            print(f"✅ Created: {filepath}")
-
-        # Create __init__.py
-        init_file = code_dir / "__init__.py"
-        with open(init_file, 'w') as f:
-            f.write(f'"""\n{output.requirements.project_name}\n"""')
-
-        print(f"\n✅ LangGraph code saved to: {code_dir}")
-        print("\nTo run the generated code:")
-        print(f"  cd {code_dir}")
-        print("  export OPENAI_API_KEY=your_key_here")
-        print("  export TAVILY_API_KEY=your_key_here  # Optional for web search")
-        print("  python main.py")
+        # Use the new method
+        self.save_generated_code(output, output_dir)

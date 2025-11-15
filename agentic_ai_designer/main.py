@@ -18,7 +18,8 @@ class InteractiveCLI:
     """Interactive command-line interface for the Agentic AI Designer."""
 
     def __init__(self):
-        self.designer = AgenticAIDesigner()
+        self.designer = None  # Will be initialized with framework selection
+        self.selected_frameworks = []
 
     def print_header(self):
         """Print application header."""
@@ -66,6 +67,33 @@ class InteractiveCLI:
         if not value:
             return []
         return [item.strip() for item in value.split(",") if item.strip()]
+
+    def select_frameworks(self) -> list:
+        """Select frameworks for code generation."""
+        print("\n🔧 Code Generation Frameworks:")
+        print("Select which frameworks to generate code for:")
+        print("  1. LangGraph only")
+        print("  2. CrewAI only")
+        print("  3. Both LangGraph and CrewAI")
+        print("  4. None (design only)")
+
+        choice = self.get_int_input("Select option", 1)
+
+        frameworks_map = {
+            1: ['langgraph'],
+            2: ['crewai'],
+            3: ['langgraph', 'crewai'],
+            4: []
+        }
+
+        frameworks = frameworks_map.get(choice, ['langgraph'])
+
+        if frameworks:
+            print(f"✅ Selected frameworks: {', '.join(frameworks).upper()}")
+        else:
+            print("✅ Design only (no code generation)")
+
+        return frameworks
 
     def interactive_requirements_gathering(self) -> SystemRequirements:
         """Gather requirements through interactive prompts."""
@@ -267,6 +295,12 @@ class InteractiveCLI:
         print("🚀 STARTING DESIGN PROCESS")
         print("=" * 80)
 
+        # Select frameworks
+        self.selected_frameworks = self.select_frameworks()
+
+        # Initialize designer with selected frameworks
+        self.designer = AgenticAIDesigner(frameworks=self.selected_frameworks)
+
         # Run design
         output = self.designer.design_system(requirements)
 
@@ -300,10 +334,12 @@ class InteractiveCLI:
         if save_report == 'y':
             self.save_report(report, output.requirements.project_name)
 
-        # Ask to save LangGraph code
-        save_code = self.get_input("\n💻 Save LangGraph implementation code? (y/n)", "y").lower()
-        if save_code == 'y':
-            self.designer.save_langgraph_code(output)
+        # Ask to save generated code
+        if self.selected_frameworks:
+            framework_names = ' and '.join([f.upper() for f in self.selected_frameworks])
+            save_code = self.get_input(f"\n💻 Save {framework_names} implementation code? (y/n)", "y").lower()
+            if save_code == 'y':
+                self.designer.save_generated_code(output)
 
     def run(self):
         """Run the interactive CLI application."""
