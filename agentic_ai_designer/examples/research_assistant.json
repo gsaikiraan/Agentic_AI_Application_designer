@@ -1,0 +1,41 @@
+{
+  "project_name": "Autonomous Research Assistant",
+  "description": "An intelligent multi-agent system for conducting comprehensive literature reviews, synthesizing research findings, and generating insights across scientific domains",
+  "primary_goals": [
+    "Automate literature search and discovery",
+    "Synthesize findings from multiple research papers",
+    "Generate structured research summaries",
+    "Identify research gaps and opportunities"
+  ],
+  "domain": "Research and Development",
+  "num_agents": 4,
+  "agent_specializations": [
+    "Literature Search",
+    "Paper Analysis",
+    "Citation Management",
+    "Summary Generation"
+  ],
+  "required_tools": [
+    "Web Search API",
+    "Academic Database (arXiv, PubMed)",
+    "PDF Parser",
+    "Citation Manager",
+    "Knowledge Graph"
+  ],
+  "communication_needs": [
+    "Share discovered papers between agents",
+    "Coordinate analysis tasks",
+    "Aggregate findings"
+  ],
+  "scalability_needs": "high",
+  "performance_requirements": "standard",
+  "reliability_requirements": "high",
+  "constraints": [
+    "API rate limits for academic databases",
+    "Cost optimization for LLM calls"
+  ],
+  "preferences": {
+    "architecture_style": "hierarchical",
+    "communication_pattern": "message_queue"
+  }
+}

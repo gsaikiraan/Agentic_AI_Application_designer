@@ -1,0 +1,23 @@
+{
+  "project_name": "Personal Task Assistant",
+  "description": "A simple single-agent system that helps users manage tasks and retrieve information",
+  "primary_goals": [
+    "Manage user's task list",
+    "Retrieve information from the web",
+    "Set reminders and notifications"
+  ],
+  "domain": "Intelligent Assistants",
+  "num_agents": 1,
+  "agent_specializations": [],
+  "required_tools": [
+    "Web Search",
+    "Calendar API",
+    "Task Database"
+  ],
+  "communication_needs": [],
+  "scalability_needs": "low",
+  "performance_requirements": "standard",
+  "reliability_requirements": "standard",
+  "constraints": [],
+  "preferences": {}
+}
